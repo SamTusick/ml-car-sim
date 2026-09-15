@@ -1,5 +1,6 @@
 import pygame
 import math
+import time
 
 # ------------- Functions -------------
 
@@ -19,11 +20,23 @@ def blit_rotate_center(screen, image, top_left, angle):
 CAR = scale_image(pygame.image.load("assests/car.png"), 0.03)
 TRACK = scale_image(pygame.image.load("assests/track1.png"), 1)
 
-# Out of Bounds color
+# Out of Bounds Mask
 ob_color = pygame.Color(14,209,69)
 threshold_target = (15,15,15,50)
 
 OB_MASK = pygame.mask.from_threshold(TRACK, ob_color, threshold_target)
+
+# Start/Finish Mask
+finish_line_color = pygame.Color(0,0,0)
+threshold_line_target = (2,2,2,255)
+
+FINISH_LINE_MASK = pygame.mask.from_threshold(TRACK, finish_line_color, threshold_line_target)
+
+# Lap time
+lap_started = False
+start_time = 0
+cooldown_duration = 5000  # 5 seconds in milliseconds
+last_trigger_time = 0
 
 # Scren Constants 
 SCREEN_WIDTH = 1280
@@ -106,7 +119,6 @@ def draw(screen, player_car):
 my_car = PlayerCar(3,3)
 clock = pygame.time.Clock()
 running = True
-dt = 0      
 
 while running:
     draw(screen, my_car)
@@ -122,19 +134,39 @@ while running:
 
     # Arrow Keys Movement   
     if keys[UP]:
-        #rect1.y -= VELOCITY * dt
         moved = True
         my_car.move_forward()
     if keys[LEFT]:
-        #rect1.x -= VELOCITY * dt
         my_car.rotate(left=True)
     if keys[RIGHT]:
-        #rect1.x += VELOCITY * dt
         my_car.rotate(right=True)
 
     if not moved:
         my_car.reduce_speed()
 
+    # Start/ Finish
+    current_time = pygame.time.get_ticks()  # Get current game time in ms
+
+    if my_car.collison(FINISH_LINE_MASK) is not None:
+        # Check if enough time has passed since the last cross to prevent double-triggering
+        if current_time - last_trigger_time > cooldown_duration:
+            
+            if not lap_started:
+                # First time crossing: Start the lap
+                start_time = current_time
+                lap_started = True
+                last_trigger_time = current_time
+                print('Start', start_time / 1000) # Convert to seconds for readability
+                
+            else:
+                # Second time crossing: Finish the lap
+                finish_time = current_time
+                lap_time = finish_time - start_time
+                lap_started = False # Reset for the next lap
+                last_trigger_time = current_time
+                
+                print('Finish', finish_time / 1000)
+                print('Lap Time: ', lap_time / 1000, 'seconds')
 
     # Track Limits
     if my_car.collison(OB_MASK) is not None:
@@ -151,9 +183,7 @@ while running:
     if keys[pygame.K_q]:
         running = False
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
-    dt = clock.tick(60) / 1000
+    clock.tick(60)
+
 
 pygame.quit()
