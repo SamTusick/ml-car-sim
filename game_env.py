@@ -14,9 +14,16 @@ def blit_rotate_center(screen, image, top_left, angle):
     screen.blit(rotated_image, new_rect.topleft)
 
 # ------------- Constants -------------
+
 # Assests
 CAR = scale_image(pygame.image.load("assests/car.png"), 0.03)
 TRACK = scale_image(pygame.image.load("assests/track1.png"), 1)
+
+# Out of Bounds color
+ob_color = pygame.Color(14,209,69)
+threshold_target = (15,15,15,50)
+
+OB_MASK = pygame.mask.from_threshold(TRACK, ob_color, threshold_target)
 
 # Scren Constants 
 SCREEN_WIDTH = 1280
@@ -70,10 +77,21 @@ class Car:
         self.vel = max(self.vel - self.acceleration / 2, 0)
         self.move()
 
+    def collison(self, mask, x=0, y=0):
+        rotated_car = pygame.transform.rotate(self.img, self.angle)
+        new_rect = rotated_car.get_rect(
+            center=self.img.get_rect(topleft=(self.x, self.y)).center
+            )
+        car_mask = pygame.mask.from_surface(rotated_car)
+        offset = (int(new_rect.x - x), int(new_rect.y - y))
+        intersection_point = mask.overlap(car_mask, offset)
+        return intersection_point
+
 
 class PlayerCar(Car):
     IMG = CAR
-    START_POS = (SCREEN_MIDDLE_X, SCREEN_MIDDLE_Y)
+    #START_POS = (SCREEN_MIDDLE_X, SCREEN_MIDDLE_Y)
+    START_POS = (30, 630)
 
 def draw(screen, player_car):
     screen.blit(TRACK, (0,0))
@@ -112,10 +130,16 @@ while running:
     if not moved:
         my_car.reduce_speed()
 
-    # Boundry Handling
-    if my_car.y > SCREEN_HEIGHT or my_car.x > SCREEN_WIDTH or my_car.y < 0 or my_car.x < 0:
-        my_car.x, my_car.y = SCREEN_MIDDLE_X, SCREEN_MIDDLE_Y
-    
+
+    # Track Limits
+    if my_car.collison(OB_MASK) is not None:
+        print('Collide')
+    else: 
+        print("car is safe")
+
+    # Off Screen Boundry Handling
+    #if my_car.y > SCREEN_HEIGHT or my_car.x > SCREEN_WIDTH or my_car.y < 0 or my_car.x < 0:
+    #    my_car.x, my_car.y = SCREEN_MIDDLE_X, SCREEN_MIDDLE_Y
 
     # If 'q' gets pressed close game
     if keys[pygame.K_q]:
