@@ -77,6 +77,11 @@ class Car:
         self.vel = max(self.vel - self.acceleration / 2, 0)
         self.move()
 
+    def stop(self):
+        self.acceleration = 0
+        self.vel = 0
+        self.rotation_vel = 0
+
     def collison(self, mask, x=0, y=0):
         rotated_car = pygame.transform.rotate(self.img, self.angle)
         new_rect = rotated_car.get_rect(
@@ -133,9 +138,10 @@ while running:
 
     # Track Limits
     if my_car.collison(OB_MASK) is not None:
-        print('Collide')
-    else: 
-        print("car is safe")
+        #print('Collide')
+        my_car.stop()
+    #else: 
+    #    print("car is safe")
 
     # Off Screen Boundry Handling
     #if my_car.y > SCREEN_HEIGHT or my_car.x > SCREEN_WIDTH or my_car.y < 0 or my_car.x < 0:
