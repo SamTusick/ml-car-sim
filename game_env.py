@@ -33,6 +33,7 @@ threshold_line_target = (2,2,2,255)
 FINISH_LINE_MASK = pygame.mask.from_threshold(TRACK, finish_line_color, threshold_line_target)
 
 # Lap time
+first_lap = True
 lap_started = False
 start_time = 0
 cooldown_duration = 5000  # 5 seconds in milliseconds
@@ -149,10 +150,11 @@ while running:
 
     if my_car.collison(FINISH_LINE_MASK) is not None:
         # Check if enough time has passed since the last cross to prevent double-triggering
-        if current_time - last_trigger_time > cooldown_duration:
+        if current_time - last_trigger_time > cooldown_duration or first_lap:
             
             if not lap_started:
                 # First time crossing: Start the lap
+                first_lap = False
                 start_time = current_time
                 lap_started = True
                 last_trigger_time = current_time
