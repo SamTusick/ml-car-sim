@@ -1,5 +1,5 @@
 import pygame
-from environment.game_env import Env
+from car_sim.env import Env
 
 # Movement Constant 
 UP = pygame.K_UP
