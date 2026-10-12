@@ -20,8 +20,12 @@ Just trying to learn as much as I can
 
 We want the car to act like a real car, so it should only be able to move forward(gas) and make turns using the left and right movement. Instead of when changing the x coordinate moving the whole object directly that direction we want to pair it with the forward movement to create a 'turn'.
 
-### Track Limits 
+### Track Limits
+
 - Have a background image, and a track image on seperate layers. Place the car on top of the trackn layer so it can detect boundaries.
 
 - **New Approach**: Set up a threshold mask for one specific color and compare car mask to that mask, to see if it has intersected
 
+### I think this is all I need for the actual game environment for now. I may need to go through and update things when I began training.
+
+## Machine Learning
