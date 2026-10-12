@@ -16,8 +16,8 @@ def blit_rotate_center(screen, image, top_left, angle):
 # ------------- Constants -------------
 
 # Assests
-CAR = scale_image(pygame.image.load("assests/car.png"), 0.03)
-LOGIC_TRACK = scale_image(pygame.image.load("assests/tracks/logic_track1.png"), 1)
+CAR = scale_image(pygame.image.load("assets/car.png"), 0.03)
+LOGIC_TRACK = scale_image(pygame.image.load("assets/tracks/logic_track1.png"), 1)
 
 # Out of Bounds Mask
 # OB in logic image is RED(255,0,0)
