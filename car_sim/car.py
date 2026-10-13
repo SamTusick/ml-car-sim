@@ -1,6 +1,6 @@
 import pygame
 import math
-from .env import blit_rotate_center, scale_image
+from .helper_functs import blit_rotate_center, scale_image
 
 # ------------- Car -------------
 class Car:

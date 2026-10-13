@@ -1,5 +1,5 @@
 import pygame
-from env import scale_image
+from .helper_functs import scale_image
 
 LOGIC_TRACK = scale_image(pygame.image.load("assets/tracks/logic_track1.png"), 1)
 
