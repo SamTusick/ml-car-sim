@@ -35,3 +35,5 @@ CP4_MASK = pygame.mask.from_threshold(LOGIC_TRACK, cp4, cp_threshold_target)
 cp5 = pygame.Color(255, 127, 39)
 CP5_MASK = pygame.mask.from_threshold(LOGIC_TRACK, cp5, cp_threshold_target)
 
+CP_MASKS = [CP1_MASK, CP2_MASK, CP3_MASK, CP4_MASK, CP5_MASK]
+

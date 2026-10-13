@@ -4,7 +4,7 @@ import numpy as np
 from enum import Enum
 from gymnasium import spaces
 from .car import PlayerCar
-from .track import LOGIC_TRACK, OB_MASK, FINISH_LINE_MASK
+from .track import LOGIC_TRACK, OB_MASK, FINISH_LINE_MASK, CP_MASKS
 
 class Actions(Enum):
     COAST = 0
