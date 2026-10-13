@@ -1,5 +1,5 @@
 import pygame
-from car_sim.env import Env
+from car_sim.env import CarEnv
 
 # Movement Constant 
 UP = pygame.K_UP
@@ -7,7 +7,7 @@ LEFT = pygame.K_LEFT
 RIGHT = pygame.K_RIGHT
 
 def main():
-    env = Env()
+    env = CarEnv()
     clock = pygame.time.Clock()
     running = True
 
