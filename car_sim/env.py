@@ -57,7 +57,7 @@ class CarEnv(gym.Env):
 
     def _update_distance_to_gate(self):
         car_x, car_y = self.car.get_center()
-        if self.next_gate > 4:
+        if self.next_gate > len(CP_MASKS):
             gate_x, gate_y = FINISH_CENTER
         else:
             gate_x, gate_y = cp_gate_points[self.next_gate]

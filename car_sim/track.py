@@ -16,6 +16,7 @@ finish_line_color = pygame.Color(0,0,0)
 threshold_line_target = (2,2,2,255)
 
 FINISH_LINE_MASK = pygame.mask.from_threshold(LOGIC_TRACK, finish_line_color, threshold_line_target)
+FINISH_CENTER = FINISH_LINE_MASK.centroid()
 
 # Checkpoints 
 cp_threshold_target = (15,15,15,50)
