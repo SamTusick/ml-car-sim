@@ -13,7 +13,7 @@ class Car:
         self.x, self.y = self.START_POS
         self.acceleration = 0.1
         self.turn_threshold = 0.5
-
+        
     def rotate(self, left=False, right=False):
         if left and self.vel > self.turn_threshold:
             self.angle += self.rotation_vel
@@ -53,6 +53,9 @@ class Car:
         offset = (int(new_rect.x - x), int(new_rect.y - y))
         intersection_point = mask.overlap(car_mask, offset)
         return intersection_point
+    
+    def get_center(self):
+        return self.img.get_rect(topleft=(self.x, self.y)).center
 
 CAR = scale_image(pygame.image.load("assets/car.png"), 0.03)
 
