@@ -2,6 +2,10 @@ import pygame
 import math
 from .helper_functs import blit_rotate_center, scale_image
 
+MAX_SENSOR_DIST = 200
+SENSOR_ANGLES = [-math.pi/3, -math.pi/6, 0.0, math.pi/6, math.pi/3] #[-60deg, -30deg, 0deg, 30deg, 60deg]
+SENSOR_STEP = 5 # value to change
+
 # ------------- Car -------------
 class Car:
     def __init__(self, max_vel, rotation_vel):
@@ -56,6 +60,21 @@ class Car:
     
     def get_center(self):
         return self.img.get_rect(topleft=(self.x, self.y)).center
+
+    def ray_cast(self, offset, mask, max_dist=MAX_SENSOR_DIST, step=SENSOR_STEP):
+        cx, cy = self.get_center()                     
+        heading = math.radians(self.angle) + offset            
+        dx, dy = -math.sin(heading), -math.cos(heading)
+        w, h = mask.get_size()
+
+        for d in range(0, max_dist, step):
+            px = int(cx + dx * d)
+            py = int(cy + dy * d)
+            if px >= w or px < 0 or py >= h or py < 0:                      
+                return d
+            if mask.get_at((px,py)) != 0:                       
+                return d
+        return max_dist
 
 CAR = scale_image(pygame.image.load("assets/car.png"), 0.03)
 
