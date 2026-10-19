@@ -1,11 +1,7 @@
 import math
 import pygame
-from car_sim.car import PlayerCar
-from car_sim.track import OB_MASK
-import car_sim.car as car_module
-print(car_module.__file__)
-print(PlayerCar.__mro__)
-print("ray_cast" in dir(PlayerCar))
+from car_sim.car import PlayerCar, SENSOR_ANGLES, SENSOR_STEP, MAX_SENSOR_DIST
+from car_sim.track import OB_MASK, LOGIC_TRACK
 
 def place_center(car, x, y):
     """Move the car so its center is at (x, y)."""
@@ -54,14 +50,58 @@ def synthetic_tests():
 def track_readings():
     car = PlayerCar(3, 3)
     print(f"spawn center: {car.get_center()}, angle: {car.angle}")
-    for name, offset in [("left 60", math.pi / 3),
-                         ("left 30", math.pi / 6),
-                         ("ahead", 0.0),
-                         ("right 30", -math.pi / 6),
-                         ("right 60", -math.pi / 3)]:
-        print(f"{name:>9}: {car.ray_cast(offset, OB_MASK)}")
+    for offset in SENSOR_ANGLES:
+        print(f"{math.degrees(offset):>6.0f} deg: {car.ray_cast(offset, OB_MASK)}")
+
+
+def visual_test():
+    """Drive with arrow keys and watch the rays. Esc/close to quit, R to reset."""
+    pygame.init()
+    screen = pygame.display.set_mode(LOGIC_TRACK.get_size())
+    pygame.display.set_caption("Ray test")
+    font = pygame.font.SysFont(None, 20)
+    clock = pygame.time.Clock()
+    car = PlayerCar(3, 3)
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key == pygame.K_r:
+                    car = PlayerCar(3, 3)
+
+        keys = pygame.key.get_pressed()
+        car.rotate(left=keys[pygame.K_LEFT], right=keys[pygame.K_RIGHT])
+        if keys[pygame.K_UP]:
+            car.move_forward()
+        else:
+            car.reduce_speed()
+
+        screen.blit(LOGIC_TRACK, (0, 0))
+        car.draw(screen)
+
+        cx, cy = car.get_center()
+        for i, offset in enumerate(SENSOR_ANGLES):
+            dist = car.ray_cast(offset, OB_MASK)
+            heading = math.radians(car.angle) + offset
+            end = (cx - math.sin(heading) * dist, cy - math.cos(heading) * dist)
+            color = (0, 255, 0) if dist >= MAX_SENSOR_DIST else (255, 255, 0)
+            pygame.draw.line(screen, color, (cx, cy), end, 2)
+            pygame.draw.circle(screen, (255, 0, 255), end, 4)
+            label = font.render(f"{math.degrees(offset):.0f}: {dist}", True, (255, 255, 255), (0, 0, 0))
+            screen.blit(label, (10, 10 + 18 * i))
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
 
 
 if __name__ == "__main__":
     synthetic_tests()
     track_readings()
+    visual_test()

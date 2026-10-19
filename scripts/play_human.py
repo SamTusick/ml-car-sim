@@ -9,6 +9,7 @@ controls_to_actions = {
     (True,  False, True): 3,
     (False, True,  False): 4,
     (False, False, True): 5,
+    # Used for human testing but not need in model 
     (False, True, True): 0,
     (True, True, True): 1
 }

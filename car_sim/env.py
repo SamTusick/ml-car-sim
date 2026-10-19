@@ -6,7 +6,6 @@ from enum import Enum
 from gymnasium import spaces
 from .car import PlayerCar
 from .track import LOGIC_TRACK, OB_MASK, FINISH_LINE_MASK, FINISH_CENTER, CP_MASKS, cp_gate_points
-from .helper_functs import point_to_segment_dist
 
 class Actions(Enum):
     COAST = 0
