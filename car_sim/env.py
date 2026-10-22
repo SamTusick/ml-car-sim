@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 from enum import Enum
 from gymnasium import spaces
-from .car import PlayerCar
+from .car import PlayerCar, MAX_SENSOR_DIST, SENSOR_ANGLES
 from .track import LOGIC_TRACK, OB_MASK, FINISH_LINE_MASK, FINISH_CENTER, CP_MASKS, cp_gate_points
 
 class Actions(Enum):
@@ -27,9 +27,8 @@ class CarEnv(gym.Env):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
-        # TODO
-        # PLACEHOLDER: replace with your ray design
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32)
+        # shape is rays + velo
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(len(SENSOR_ANGLES) + 1,), dtype=np.float32)
 
         self.action_space = spaces.Discrete(len(Actions))
 
@@ -48,9 +47,11 @@ class CarEnv(gym.Env):
         self.car = None
 
     def _get_obs(self):
-        # TODO
-        # PLACEHOLDER until the rays exist
-        return np.zeros(self.observation_space.shape, dtype=np.float32)
+        obs_data = []
+        for offset in SENSOR_ANGLES:
+            obs_data.append(self.car.ray_cast(offset, OB_MASK) / MAX_SENSOR_DIST)
+        obs_data.append(self.car.vel / self.car.max_vel)
+        return np.array(obs_data, dtype=np.float32)
 
     def _get_info(self):
         return {"finished": self.finished,"steps": self.steps, "gates_passed": self.next_gate, "distance_to_next_gate": self.distance_to_next_gate}
