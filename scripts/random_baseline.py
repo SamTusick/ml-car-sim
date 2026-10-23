@@ -24,13 +24,16 @@ def main():
     for episode in tqdm(range(N_EPISODES)):
         env.reset()
         done = False
+        total_reward = 0.0
         while not done:
             action = env.action_space.sample()
-            _, _, terminated, truncated, info = env.step(action)
+            _, reward, terminated, truncated, info = env.step(action)
+            total_reward += reward
             done = terminated or truncated
 
         rows.append({
             "episode": episode,
+            "total_reward": total_reward,
             "steps": info["steps"],
             "gates_passed": info["gates_passed"],
             "distance_to_next_gate": info["distance_to_next_gate"],
@@ -52,7 +55,12 @@ def main():
     distances = [r["distance_to_next_gate"] for r in rows]
     gate_counts = Counter(r["gates_passed"] for r in rows)
 
+    rewards = [r["total_reward"] for r in rows]
+
     print(f"episodes: {N_EPISODES}, seed: {SEED}")
+    print(f"total reward: mean={statistics.mean(rewards):.2f}, "
+          f"median={statistics.median(rewards):.2f}, stdev={statistics.stdev(rewards):.2f}, "
+          f"min={min(rewards):.2f}, max={max(rewards):.2f}")
     print(f"steps: mean={statistics.mean(steps):.1f}, "
           f"median={statistics.median(steps):.1f}, "
           f"min={min(steps)}, max={max(steps)}")

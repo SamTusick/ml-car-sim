@@ -59,7 +59,8 @@ class Car:
         return intersection_point
     
     def get_center(self):
-        return self.img.get_rect(topleft=(self.x, self.y)).center
+        # float center; 
+        return (self.x + self.img.get_width() / 2, self.y + self.img.get_height() / 2)
 
     def ray_cast(self, offset, mask, max_dist=MAX_SENSOR_DIST, step=SENSOR_STEP):
         cx, cy = self.get_center()                     

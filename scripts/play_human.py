@@ -35,7 +35,8 @@ def main():
         controls = (keys[UP], keys[LEFT], keys[RIGHT])
         action = controls_to_actions[controls]
 
-        _, _, terminated, truncated, info = env.step(action)
+        _, reward, terminated, truncated, info = env.step(action)
+        print(f"reward: {reward:.4f}")
 
         if terminated or truncated:
             print(f"episode over: steps={info['steps']}, "

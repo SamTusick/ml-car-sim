@@ -20,6 +20,14 @@ SCREEN_HEIGHT = 720
 # 3px per step for ~3600 px track -> 1200 steps * 2x/3x margin 
 MAX_STEPS = 3000
 
+# reward constants 
+PASSED_GATE_REWARD = 400
+FINISHED_REWARD = 4000
+STEPS_REWARD = 0.01
+DISTANCE_REWARD = 0.1
+CRASH_PEN = 400
+TIME_OUT_PEN = 200
+
 class CarEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 60}
 
@@ -85,6 +93,8 @@ class CarEnv(gym.Env):
         terminated = False
         truncated = False
         reward = 0.0
+        prev_dist = self.distance_to_next_gate
+        gate_passed = False
 
         # 1: apply the controls (reuse your old movement block)
         if up:
@@ -96,20 +106,36 @@ class CarEnv(gym.Env):
         # 2: update steps, gate check, distance update
         self.steps += 1
         if self.next_gate < len(CP_MASKS):
+            # gate passed
             if car.collison(CP_MASKS[self.next_gate]) is not None:
                 self.next_gate += 1
+                reward += PASSED_GATE_REWARD
+                gate_passed = True
+
         self._update_distance_to_gate()
+            
+        if not gate_passed:
+            dist_moved = prev_dist - self.distance_to_next_gate
+            reward += DISTANCE_REWARD * dist_moved
 
         # 3: set terminated
+        # crash into wall
         if car.collison(OB_MASK):
             terminated = True
+            reward -= CRASH_PEN
+        # finish reached
         if (self.next_gate >= len(CP_MASKS) and car.collison(FINISH_LINE_MASK)):
             terminated = True
-            self.finished = True 
+            self.finished = True
+            reward += FINISHED_REWARD 
 
-        # 4: set truncated (use a step limit)
-        if self.steps >= MAX_STEPS:
+        # 4: set truncated
+        if self.steps > MAX_STEPS:
             truncated = True
+            reward -= TIME_OUT_PEN
+
+        # cost per step
+        reward += -1 * STEPS_REWARD
 
         if self.render_mode == "human":
             self.render()
