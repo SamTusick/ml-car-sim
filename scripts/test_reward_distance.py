@@ -92,7 +92,7 @@ def main():
         max_gate = max(max_gate, env.next_gate)
         if terminated or truncated:
             print(f"episode ended at step {i}: terminated={terminated} truncated={truncated} "
-                  f"finished={info['finished']} gates_passed={info['gates_passed']}")
+                  f"finished={info['finished']} gates_passed={info['gates_passed']} reward={reward:.4f}")
             break
     print(f"{checked} steps asserted, max gates passed = {max_gate}")
     assert max_gate >= len(GATES), f"never got past the 5th gate (max_gate={max_gate})"
