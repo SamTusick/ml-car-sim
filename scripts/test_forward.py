@@ -1,5 +1,5 @@
 # Scratch check of forward() from init_experiment.py using hand-built networks.
-# Run: python scripts/test_forward.py
+# Run: python -m "scripts.test_forward.py"
 
 import numpy as np
 

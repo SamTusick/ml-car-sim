@@ -1,7 +1,5 @@
 import numpy as np
 
-SEED = 0
-N_NETWORKS = 50
 N_INPUTS = 6
 N_HIDDEN = 8
 N_OUTPUTS = 6
