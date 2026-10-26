@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from car_sim.ga import to_vector
+from car_sim.ga import to_network, to_vector
 from car_sim.network import make_network
 
 
@@ -38,7 +38,30 @@ def test_to_vector_is_copy():
     print("PASS to_vector_is_copy")
 
 
+# Case 4: network -> vector -> network keeps every array's shape.
+def test_round_trip_shapes():
+    rng = np.random.default_rng(0)
+    network = make_network(rng, 5)
+    rebuilt = to_network(to_vector(network))
+    assert len(rebuilt) == len(network), f"length {len(rebuilt)}"
+    for name, before, after in zip(("w1", "b1", "w2", "b2"), network, rebuilt):
+        assert before.shape == after.shape, f"{name} {before.shape} -> {after.shape}"
+    print("PASS round_trip_shapes")
+
+
+# Case 5: network -> vector -> network keeps every value.
+def test_round_trip_values():
+    rng = np.random.default_rng(0)
+    network = make_network(rng, 5)
+    rebuilt = to_network(to_vector(network))
+    for name, before, after in zip(("w1", "b1", "w2", "b2"), network, rebuilt):
+        assert np.array_equal(before, after), f"{name} values changed"
+    print("PASS round_trip_values")
+
+
 if __name__ == "__main__":
     test_to_vector_shape()
     test_to_vector_order()
     test_to_vector_is_copy()
+    test_round_trip_shapes()
+    test_round_trip_values()
