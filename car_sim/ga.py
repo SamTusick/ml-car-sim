@@ -1,6 +1,6 @@
 # Genetic Algorithm 
 import numpy as np
-from .network import N_INPUTS, N_HIDDEN, N_OUTPUTS
+from .network import N_INPUTS, N_HIDDEN, N_OUTPUTS, forward
 
 def to_network(vector):
     # break vector into each parameter 
@@ -35,7 +35,23 @@ def to_vector(network):
     return vector # shape (110,)
 
 def evaluate(genome, env):
-    return 
+    done = False
+    curr_reward = 0.0
+    # convert genome to network
+    net = to_network(genome)
+    # reset the env
+    # gather observations
+    obs, _ = env.reset()
+    # Loop: feed the observation to forward, pass action to env.step
+        # add up the reward
+        # stop whem episode ends
+    while not done:
+        _,action = forward(net, obs)
+        obs, reward,terminated,truncated,info_ = env.step(action)    # returns self._get_obs(), reward, terminated, truncated, self._get_info()
+        curr_reward += reward
+        if terminated or truncated:
+            done = True
+    return curr_reward
 
 def select_parents(population, fitness_scores):
     return
