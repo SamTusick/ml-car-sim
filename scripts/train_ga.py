@@ -43,6 +43,35 @@ def parse_seeds(text):
     return sorted(seeds)
 
 
+# Turn "0,5,10,last", "all" or "none" into a set of generation numbers to save.
+def parse_save_gens(text, n_generations):
+    text = text.strip().lower()
+    if text == "all":
+        return set(range(n_generations))
+    if text == "none":
+        return set()
+    gens = set()
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        gen = n_generations - 1 if part == "last" else int(part)
+        if not 0 <= gen < n_generations:
+            raise ValueError(f"generation {gen} is outside 0..{n_generations - 1}")
+        gens.add(gen)
+    return gens
+
+
+# Save the evaluated population and its fitness scores for one generation.
+def save_population(pop_dir, seed, generation, population, fitness_scores):
+    pop_dir.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        pop_dir / f"seed{seed}_gen{generation}.npz",
+        population=np.array(population, dtype=np.float64),
+        fitness_scores=np.array(fitness_scores, dtype=np.float64),
+    )
+
+
 # Collect the tunable settings that go into every CSV row and into config.json.
 def get_settings():
     return {
@@ -92,7 +121,7 @@ def write_rows(path, rows):
 
 
 # Run one full GA for a single seed and return the per-generation rows.
-def run_one_seed(seed):
+def run_one_seed(seed, pop_dir=None, save_gens=()):
     rng = np.random.default_rng(seed)   # one rng, passed down everywhere
     env = CarEnv()                      # headless, fresh per seed
     settings = get_settings()
@@ -118,6 +147,10 @@ def run_one_seed(seed):
             **settings,
         })
 
+        # save the population that was just evaluated, before it is replaced (no rng used)
+        if generation in save_gens:
+            save_population(pop_dir, seed, generation, population, fitness_scores)
+
         population = next_generation(population, fitness_scores, rng)
 
     env.close()
@@ -130,6 +163,8 @@ def parse_args():
     parser.add_argument("--name", required=True, help='experiment name, e.g. "baseline"')
     parser.add_argument("--seeds", default="0,1,2", help='e.g. "0,1,2,5" or "0-9"')
     parser.add_argument("--hypothesis", default=None, help="optional note saved to hypothesis.txt")
+    parser.add_argument("--save-gens", default="0,5,10,last",
+                        help='generations to save: comma list, "last", "all" or "none"')
     parser.add_argument("--overwrite", action="store_true",
                         help="allow writing into an experiment that already has results")
     return parser.parse_args()
@@ -141,6 +176,11 @@ def main():
         seeds = parse_seeds(args.seeds)
     except ValueError as e:
         sys.exit(f"Invalid --seeds: {e}")
+
+    try:
+        save_gens = parse_save_gens(args.save_gens, N_GENERATIONS)
+    except ValueError as e:
+        sys.exit(f"Invalid --save-gens: {e}")
 
     exp_dir = RESULTS_DIR / args.name
     existing = sorted(exp_dir.glob("ga_seed*.csv")) if exp_dir.exists() else []
@@ -156,7 +196,7 @@ def main():
         (exp_dir / "hypothesis.txt").write_text(args.hypothesis + "\n")
 
     for seed in seeds:
-        rows = run_one_seed(seed)
+        rows = run_one_seed(seed, exp_dir / "populations", save_gens)
         out_file = exp_dir / f"ga_seed{seed}.csv"
         write_rows(out_file, rows)
         print(f"saved to {out_file}")
