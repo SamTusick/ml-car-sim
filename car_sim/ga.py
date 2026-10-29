@@ -51,11 +51,11 @@ def evaluate(genome, env):
         # stop whem episode ends
     while not done:
         _,action = forward(net, obs)
-        obs, reward,terminated,truncated,info_ = env.step(action)    # returns self._get_obs(), reward, terminated, truncated, self._get_info()
+        obs, reward,terminated,truncated,info = env.step(action)    # returns self._get_obs(), reward, terminated, truncated, self._get_info()
         curr_reward += reward
         if terminated or truncated:
             done = True
-    return curr_reward
+    return curr_reward, info
 
 def select_parents(population, fitness_scores):
     # sort fitness scores but keep index using argsort
