@@ -73,16 +73,27 @@ def select_parents(population, fitness_scores):
     for i in parent_pool:
         genome_list.append(population[i])
 
+    # find elite parent genomes
     elite_parents = genome_list[len(genome_list) - n_elite : len(genome_list)] 
 
     return genome_list, elite_parents
 
-def crossover(a,b,rng):
-    return
+def crossover(a,b, rng):
+    child = np.empty_like(a)
+    # traverse every parameter in each parent 
+    for i in range(len(a)):
+        # flip a coin to decide whos gene to take
+        choice = rng.integers(0,2)    # 0 = a , 1 = b
+        # add selected gene to child
+        if choice == 0:
+            child[i] = a[i]
+        else:
+            child[i] = b[i]
+    return child
 
 def mutate(child, rng):
     return 
 
-def next_generation(populatioin, fitness_scores):
+def next_generation(population, fitness_scores):
     return
 
