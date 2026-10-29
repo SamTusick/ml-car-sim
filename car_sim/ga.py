@@ -1,6 +1,7 @@
 # Genetic Algorithm 
 import numpy as np
 from .network import N_INPUTS, N_HIDDEN, N_OUTPUTS, forward
+import math
 
 def to_network(vector):
     # break vector into each parameter 
@@ -54,7 +55,27 @@ def evaluate(genome, env):
     return curr_reward
 
 def select_parents(population, fitness_scores):
-    return
+    # sort fitness scores but keep index using argsort
+    order = np.argsort(fitness_scores)
+
+    # select number of desired parents
+    top_percent = 0.25
+    n_elite = 2
+
+    n_parents = math.ceil(len(population) * top_percent)
+
+    # find index of top n_parents
+    parent_pool = order[len(population) - n_parents: len(population)]
+
+    # in reverse rank order
+    genome_list = []
+
+    for i in parent_pool:
+        genome_list.append(population[i])
+
+    elite_parents = genome_list[len(genome_list) - n_elite : len(genome_list)] 
+
+    return genome_list, elite_parents
 
 def crossover(a,b,rng):
     return

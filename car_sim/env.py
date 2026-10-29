@@ -82,9 +82,9 @@ class CarEnv(gym.Env):
         self.next_gate = 0
         self._update_distance_to_gate()
        
-
         if self.render_mode == "human":
             self.render()
+            
         return self._get_obs(), self._get_info()
 
     def step(self, action):
