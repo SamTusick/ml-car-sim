@@ -3,6 +3,9 @@ import numpy as np
 from .network import N_INPUTS, N_HIDDEN, N_OUTPUTS, forward
 import math
 
+MUTATION_RATE = 0.1     # p: chance of each gene mutating
+SIGMA = 0.1     # std dev of the Guassian step
+
 def to_network(vector):
     # break vector into each parameter 
     # still 1-D arrays
@@ -92,8 +95,32 @@ def crossover(a,b, rng):
     return child
 
 def mutate(child, rng):
-    return 
+    # generate random floats, size of child shape
+    mask = rng.random(child.shape) < MUTATION_RATE  # convert to bool array, ~10% True
+    noise = rng.normal(0, SIGMA, child.shape)   # calculate Guassian number
+    mutated = child + mask * noise  # build a new array of the mutated genes if chosen 
+    return mutated
 
-def next_generation(population, fitness_scores):
-    return
+def next_generation(population, fitness_scores, rng):
+    new_population = []
+    parent_pool, elites = select_parents(population=population, fitness_scores=fitness_scores)
+
+    for elite in elites:
+        new_population.append(elite.copy()) # new generation holds its own memory and shares nothing with the old population
+
+    while len(new_population) < len(population):
+        # select parents
+        parent_a = parent_pool[rng.integers(0, len(parent_pool))] 
+        parent_b = parent_pool[rng.integers(0, len(parent_pool))]
+
+        # get child
+        child = crossover(parent_a, parent_b, rng)
+
+        # mutate child
+        child = mutate(child, rng)
+
+        # append new child to new population
+        new_population.append(child)
+
+    return new_population
 
