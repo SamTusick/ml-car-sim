@@ -2,6 +2,7 @@
 
 Run from the repo root:  python -m scripts.plot_ga
 """
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -9,14 +10,13 @@ import numpy as np
 import pandas as pd
 
 RESULTS_DIR = Path("results")
-OUT_PATH = RESULTS_DIR / "ga_seeds_comparison.png"
 MANY_SEEDS = 10  # above this, use thinner lines and a compact legend
 
 
-def load_runs():
+def load_runs(exp_dir):
     """Return {seed: DataFrame} sorted numerically by seed, or {} if no files."""
     runs = {}
-    for path in RESULTS_DIR.glob("ga_seed*.csv"):
+    for path in exp_dir.glob("ga_seed*.csv"):
         df = pd.read_csv(path)
         if df.empty:
             continue
@@ -73,10 +73,13 @@ def summarize(runs):
     return pd.DataFrame(rows)
 
 
-def main():
-    runs = load_runs()
+def plot_experiment(exp_dir, show=True):
+    """Plot every seed in exp_dir and save the PNG there. Called by train_ga too."""
+    out_path = exp_dir / "ga_seeds_comparison.png"
+
+    runs = load_runs(exp_dir)
     if not runs:
-        print("No files matching results/ga_seed*.csv were found. "
+        print(f"No files matching {exp_dir}/ga_seed*.csv were found. "
               "Run scripts/train_ga.py first, from the repo root.")
         return
 
@@ -128,8 +131,8 @@ def main():
 
     fig.suptitle(f"GA training across {n} seed{'s' if n != 1 else ''}")
     fig.tight_layout()
-    fig.savefig(OUT_PATH, dpi=150, bbox_inches="tight")
-    print(f"Saved {OUT_PATH}")
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    print(f"Saved {out_path}")
 
     table = summarize(runs)
     print()
@@ -137,7 +140,16 @@ def main():
     k = int((table["first_gen_finished_above_0"] != "never").sum())
     print(f"\n{k} of {n} seeds finished the lap at least once")
 
-    plt.show()
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", required=True, help="experiment folder under results/")
+    args = parser.parse_args()
+    plot_experiment(RESULTS_DIR / args.name)
 
 
 if __name__ == "__main__":

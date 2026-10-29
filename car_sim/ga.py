@@ -5,6 +5,8 @@ import math
 
 MUTATION_RATE = 0.1     # p: chance of each gene mutating
 SIGMA = 0.1     # std dev of the Guassian step
+POOL_FRAC = 0.25
+N_ELITE = 2
 
 def to_network(vector):
     # break vector into each parameter 
@@ -62,10 +64,8 @@ def select_parents(population, fitness_scores):
     order = np.argsort(fitness_scores)
 
     # select number of desired parents
-    top_percent = 0.25
-    n_elite = 2
 
-    n_parents = math.ceil(len(population) * top_percent)
+    n_parents = math.ceil(len(population) * POOL_FRAC)
 
     # find index of top n_parents
     parent_pool = order[len(population) - n_parents: len(population)]
@@ -77,7 +77,7 @@ def select_parents(population, fitness_scores):
         genome_list.append(population[i])
 
     # find elite parent genomes
-    elite_parents = genome_list[len(genome_list) - n_elite : len(genome_list)] 
+    elite_parents = genome_list[len(genome_list) - N_ELITE : len(genome_list)] 
 
     return genome_list, elite_parents
 

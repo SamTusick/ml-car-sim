@@ -1,0 +1,19 @@
+{
+  "name": "baseline",
+  "sigma": 0.1,
+  "mutation_rate": 0.1,
+  "pool_frac": 0.25,
+  "n_elite": 2,
+  "r": 10,
+  "pop_size": 50,
+  "n_generations": 50,
+  "crossover": "uniform",
+  "mutation": "gaussian",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "timestamp_utc": "2026-10-29T05:57:46+00:00",
+  "git_commit": "33841b1"
+}
