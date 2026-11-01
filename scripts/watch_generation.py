@@ -1,3 +1,41 @@
+# watch_generation.py
+#
+# Play back every genome of one saved generation at the same time, so you can
+# see how the whole population drives. The best genome (champion) is drawn in
+# gold on top, all other cars are semi transparent, and cars that have ended
+# (crash, finish or timeout) fade out.
+#
+# RUN (from the repo root, as a module):
+#   python -m scripts.watch_generation --name baseline10 --seed 8 --gen last
+#   python -m scripts.watch_generation --name baseline10 --seed 3 --gen 9 --fps 30
+#
+# ARGUMENTS
+#   --name       experiment folder under results/, e.g. baseline10   (required)
+#   --seed       which seed's run                                    (required)
+#   --gen        generation number, or "last" for the latest saved   (required)
+#   --fps        playback frame rate, default 60
+#   --no-cache   ignore and do not write the trajectory cache
+#
+# CONTROLS
+#   SPACE        pause / resume
+#   R            restart playback from step 0
+#   UP / DOWN    faster / slower (1 to 8 frames per tick)
+#   Q or ESC     quit
+#
+# NEEDS
+#   results/<name>/populations/seed<N>_gen<G>.npz, saved during training.
+#   If the file is missing, the script lists the generations that do exist.
+#
+# CACHE
+#   First run records every genome headless and saves the trajectories to
+#   results/<name>/trajectories/seed<N>_gen<G>.npz. Later runs load that file.
+#   The cache is checked against the saved fitness scores. Use --no-cache after
+#   changing the env or reward.
+#
+# HUD (top left)
+#   seed and generation, current step, cars still driving, best fitness,
+#   number of cars that finished the lap.
+
 import argparse
 import re
 import sys
