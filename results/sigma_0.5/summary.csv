@@ -1,0 +1,11 @@
+seed,first_finisher_gen,finisher_at_gen0,final_finished_count,final_gates,final_best_fitness,n_generations
+0,,False,0,1,362.97,50
+1,,False,0,1,363.08,50
+2,7,False,36,5,6242.2,50
+3,,False,0,1,363.13,50
+4,16,False,23,5,6243.22,50
+5,,False,0,1,363.13,50
+6,,False,0,1,362.86,50
+7,17,False,33,5,6242.39,50
+8,,False,0,1,362.28,50
+9,0,True,34,5,6241.38,50

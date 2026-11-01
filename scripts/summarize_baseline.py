@@ -1,6 +1,6 @@
 """Per-seed summary of a GA experiment folder (scaffolding, no algorithm logic).
 
-Usage: python scripts/summarize_baseline.py results/baseline10
+Usage: python scripts/summarize_baseline.py results/______
 
 Reads ga_seed*.csv, prints one row per seed, writes summary.csv next to them,
 and saves per_seed_finishers.png with every seed visible and no median line.
