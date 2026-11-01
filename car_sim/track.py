@@ -2,6 +2,7 @@ import pygame
 from .helper_functs import scale_image
 
 LOGIC_TRACK = scale_image(pygame.image.load("assets/tracks/logic_track1.png"), 1)
+VISUAL_TRACK = scale_image(pygame.image.load("assets/tracks/visual_track1.png"), 1)
 
 # Out of Bounds Mask
 # OB in logic image is RED(255,0,0)

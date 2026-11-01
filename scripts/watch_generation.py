@@ -47,7 +47,7 @@ from tqdm import tqdm
 
 from car_sim.env import CarEnv
 from car_sim.car import CAR
-from car_sim.track import LOGIC_TRACK
+from car_sim.track import VISUAL_TRACK 
 from car_sim.network import forward
 from car_sim.ga import to_network
 from car_sim.helper_functs import blit_rotate_center
@@ -186,7 +186,7 @@ def tint_image(img, color=None, alpha=255):
 
 # Draw the track, all cars at the given step, and the HUD. Returns the number still driving.
 def draw_frame(screen, font, trajs, step, champ, images, seed, gen, best_fit, n_finished):
-    screen.blit(LOGIC_TRACK, (0, 0))
+    screen.blit(VISUAL_TRACK, (0, 0))
     driving = 0
     order = [i for i in range(len(trajs)) if i != champ] + [champ]   # champion on top
     for i in order:
@@ -250,7 +250,7 @@ def main():
     max_steps = max(len(t["poses"]) for t in trajs) - 1
 
     pygame.init()
-    screen = pygame.display.set_mode(LOGIC_TRACK.get_size())
+    screen = pygame.display.set_mode(VISUAL_TRACK.get_size())
     pygame.display.set_caption(f"{args.name} seed {args.seed} gen {gen}")
     font = pygame.font.Font(None, 24)
     clock = pygame.time.Clock()
