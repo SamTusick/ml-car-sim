@@ -20,6 +20,7 @@
 #   SPACE        pause / resume
 #   R            restart playback from step 0
 #   UP / DOWN    faster / slower (1 to 8 frames per tick)
+#   V            cycle sensor rays: champion only / all cars / off
 #   Q or ESC     quit
 #
 # NEEDS
@@ -37,6 +38,7 @@
 #   number of cars that finished the lap.
 
 import argparse
+import math
 import re
 import sys
 from pathlib import Path
@@ -46,8 +48,8 @@ import pygame
 from tqdm import tqdm
 
 from car_sim.env import CarEnv
-from car_sim.car import CAR
-from car_sim.track import VISUAL_TRACK 
+from car_sim.car import CAR, PlayerCar, SENSOR_ANGLES, MAX_SENSOR_DIST
+from car_sim.track import VISUAL_TRACK, OB_MASK
 from car_sim.network import forward
 from car_sim.ga import to_network
 from car_sim.helper_functs import blit_rotate_center
@@ -61,6 +63,7 @@ CHAMP_ALPHA = 255
 CHAMP_ENDED_ALPHA = 120
 CHAMP_COLOR = (255, 200, 0)
 SPEED_RANGE = (1, 8)   # min and max frames per tick
+RAY_MODES = ["champ", "all", "off"]   # V cycles through these
 
 
 # List the seed<N>_gen<G>.npz files that exist for one seed, as sorted generation numbers.
@@ -184,8 +187,22 @@ def tint_image(img, color=None, alpha=255):
     return out
 
 
+# Draw the sensor rays of one car pose, like test_rays.py. Green = no hit, yellow = hit.
+def draw_rays(screen, probe, pose):
+    probe.x, probe.y, probe.angle = pose
+    cx, cy = probe.get_center()
+    for offset in SENSOR_ANGLES:
+        dist = probe.ray_cast(offset, OB_MASK)
+        heading = math.radians(probe.angle) + offset
+        end = (cx - math.sin(heading) * dist, cy - math.cos(heading) * dist)
+        color = (0, 255, 0) if dist >= MAX_SENSOR_DIST else (255, 255, 0)
+        pygame.draw.line(screen, color, (cx, cy), end, 2)
+        pygame.draw.circle(screen, (255, 0, 255), end, 4)
+
+
 # Draw the track, all cars at the given step, and the HUD. Returns the number still driving.
-def draw_frame(screen, font, trajs, step, champ, images, seed, gen, best_fit, n_finished):
+def draw_frame(screen, font, trajs, step, champ, images, seed, gen, best_fit, n_finished,
+               probe, ray_mode):
     screen.blit(VISUAL_TRACK, (0, 0))
     driving = 0
     order = [i for i in range(len(trajs)) if i != champ] + [champ]   # champion on top
@@ -198,6 +215,8 @@ def draw_frame(screen, font, trajs, step, champ, images, seed, gen, best_fit, n_
         x, y, angle = poses[min(step, last)]
         key = ("champ" if i == champ else "normal", ended)
         blit_rotate_center(screen, images[key], (x, y), angle)
+        if not ended and (ray_mode == "all" or (ray_mode == "champ" and i == champ)):
+            draw_rays(screen, probe, (x, y, angle))
 
     lines = [
         f"seed {seed}   generation {gen}",
@@ -205,6 +224,7 @@ def draw_frame(screen, font, trajs, step, champ, images, seed, gen, best_fit, n_
         f"driving {driving} / {len(trajs)}",
         f"best fitness {best_fit:.1f}",
         f"finished lap {n_finished}",
+        f"rays: {ray_mode} (V)",
     ]
     for n, text in enumerate(lines):
         surf = font.render(text, True, (255, 255, 255), (0, 0, 0))
@@ -261,6 +281,8 @@ def main():
         ("champ", True): tint_image(CAR, CHAMP_COLOR, CHAMP_ENDED_ALPHA),
     }
 
+    probe = PlayerCar(3, 3)   # only used to cast rays at recorded poses
+    ray_mode = "champ"
     step, speed, paused, running = 0, 1, False, True
     while running:
         for event in pygame.event.get():
@@ -273,13 +295,15 @@ def main():
                     paused = not paused
                 elif event.key == pygame.K_r:
                     step = 0
+                elif event.key == pygame.K_v:
+                    ray_mode = RAY_MODES[(RAY_MODES.index(ray_mode) + 1) % len(RAY_MODES)]
                 elif event.key == pygame.K_UP:
                     speed = min(speed + 1, SPEED_RANGE[1])
                 elif event.key == pygame.K_DOWN:
                     speed = max(speed - 1, SPEED_RANGE[0])
 
         driving = draw_frame(screen, font, trajs, step, champ, images,
-                             args.seed, gen, best_fit, n_finished)
+                             args.seed, gen, best_fit, n_finished, probe, ray_mode)
         pygame.display.flip()
         if not paused and step < max_steps:
             step = min(step + speed, max_steps)
