@@ -3,8 +3,8 @@ import numpy as np
 from .network import N_INPUTS, N_HIDDEN, N_OUTPUTS, forward
 import math
 
-MUTATION_RATE = 0.1     # p: chance of each gene mutating
-SIGMA = 2.0     # std dev of the Guassian step
+MUTATION_RATE = 0.02     # p: chance of each gene mutating
+SIGMA = 0.1     # std dev of the Guassian step
 POOL_FRAC = 0.25
 N_ELITE = 2
 
