@@ -20,7 +20,7 @@ from car_sim.ga import (
     SIGMA, MUTATION_RATE, POOL_FRAC, N_ELITE,  # POOL_FRAC and N_ELITE need the ga.py change
 )
 
-POP_SIZE = 50
+POP_SIZE = 200
 N_GENERATIONS = 50
 R = 10
 RESULTS_DIR = Path("results")
