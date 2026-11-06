@@ -1,3 +1,6 @@
+# python -m scripts.train_ga --name pool_frac_0.1 --seeds 0-9
+
+
 import argparse
 import csv
 import json
