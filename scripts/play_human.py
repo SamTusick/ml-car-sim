@@ -1,5 +1,7 @@
+import argparse
 import pygame
 from car_sim.env import CarEnv
+from car_sim.track import load_track
 
 # Movement Constant 
 controls_to_actions = {
@@ -17,8 +19,21 @@ UP = pygame.K_UP
 LEFT = pygame.K_LEFT
 RIGHT = pygame.K_RIGHT
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Drive a track by hand.")
+    parser.add_argument("--track", default=None, help="logic track PNG, default is track 1")
+    parser.add_argument("--start-x", type=float, default=30)
+    parser.add_argument("--start-y", type=float, default=630)
+    parser.add_argument("--start-angle", type=float, default=0)
+    parser.add_argument("--show-reward", action="store_true", help="print the reward every step")
+    return parser.parse_args()
+
 def main():
-    env = CarEnv(render_mode='human')
+    args = parse_args()
+    track = None
+    if args.track is not None:
+        track = load_track(args.track, (args.start_x, args.start_y), args.start_angle)
+    env = CarEnv(render_mode='human', track=track)
     clock = pygame.time.Clock()
     running = True
 
@@ -29,14 +44,19 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            # click on the window to print the pixel, and the matching car top-left (36px car)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                print(f"clicked pixel ({mx}, {my}) -> start_pos for a car centered here: ({mx - 18}, {my - 18})")
 
-        # Read keyboard input 
+        # Read keyboard input
         keys = pygame.key.get_pressed()
         controls = (keys[UP], keys[LEFT], keys[RIGHT])
         action = controls_to_actions[controls]
 
         _, reward, terminated, truncated, info = env.step(action)
-        print(f"reward: {reward:.4f}")
+        if args.show_reward:
+            print(f"reward: {reward:.4f}")
 
         if terminated or truncated:
             print(f"episode over: steps={info['steps']}, "
