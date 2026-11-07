@@ -8,13 +8,13 @@ SENSOR_STEP = 5 # value to change
 
 # ------------- Car -------------
 class Car:
-    def __init__(self, max_vel, rotation_vel):
+    def __init__(self, max_vel, rotation_vel, start_pos=None, start_angle=0):
         self.img = self.IMG
         self.max_vel = max_vel
         self.vel = 0
         self.rotation_vel = rotation_vel
-        self.angle = 0
-        self.x, self.y = self.START_POS
+        self.angle = start_angle
+        self.x, self.y = start_pos if start_pos is not None else self.START_POS
         self.acceleration = 0.1
         self.turn_threshold = 0.5
         

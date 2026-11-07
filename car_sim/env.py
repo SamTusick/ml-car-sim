@@ -5,7 +5,7 @@ import numpy as np
 from enum import Enum
 from gymnasium import spaces
 from .car import PlayerCar, MAX_SENSOR_DIST, SENSOR_ANGLES
-from .track import LOGIC_TRACK, OB_MASK, FINISH_LINE_MASK, FINISH_CENTER, CP_MASKS, cp_gate_points
+from .track import DEFAULT_TRACK
 
 class Actions(Enum):
     COAST = 0
@@ -31,9 +31,10 @@ TIME_OUT_PEN = 200
 class CarEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 60}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, track=None):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
+        self.track = track if track is not None else DEFAULT_TRACK
 
         # shape is rays + velo
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(len(SENSOR_ANGLES) + 1,), dtype=np.float32)
@@ -57,7 +58,7 @@ class CarEnv(gym.Env):
     def _get_obs(self):
         obs_data = []
         for offset in SENSOR_ANGLES:
-            obs_data.append(self.car.ray_cast(offset, OB_MASK) / MAX_SENSOR_DIST)
+            obs_data.append(self.car.ray_cast(offset, self.track.ob_mask) / MAX_SENSOR_DIST)
         obs_data.append(self.car.vel / self.car.max_vel)
         return np.array(obs_data, dtype=np.float32)
 
@@ -66,15 +67,15 @@ class CarEnv(gym.Env):
 
     def _update_distance_to_gate(self):
         car_x, car_y = self.car.get_center()
-        if self.next_gate >= len(CP_MASKS):
-            gate_x, gate_y = FINISH_CENTER
+        if self.next_gate >= len(self.track.cp_masks):
+            gate_x, gate_y = self.track.finish_center
         else:
-            gate_x, gate_y = cp_gate_points[self.next_gate]
+            gate_x, gate_y = self.track.cp_points[self.next_gate]
         self.distance_to_next_gate = math.hypot(gate_x - car_x, gate_y - car_y) 
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.car = PlayerCar(3, 3)
+        self.car = PlayerCar(3, 3, self.track.start_pos, self.track.start_angle)
 
         self.finished = False
         self.steps = 0
@@ -105,9 +106,9 @@ class CarEnv(gym.Env):
 
         # 2: update steps, gate check, distance update
         self.steps += 1
-        if self.next_gate < len(CP_MASKS):
+        if self.next_gate < len(self.track.cp_masks):
             # gate passed
-            if car.collison(CP_MASKS[self.next_gate]) is not None:
+            if car.collison(self.track.cp_masks[self.next_gate]) is not None:
                 self.next_gate += 1
                 reward += PASSED_GATE_REWARD
                 gate_passed = True
@@ -120,11 +121,11 @@ class CarEnv(gym.Env):
 
         # 3: set terminated
         # crash into wall
-        if car.collison(OB_MASK):
+        if car.collison(self.track.ob_mask):
             terminated = True
             reward -= CRASH_PEN
         # finish reached
-        if (self.next_gate >= len(CP_MASKS) and car.collison(FINISH_LINE_MASK)):
+        if (self.next_gate >= len(self.track.cp_masks) and car.collison(self.track.finish_mask)):
             terminated = True
             self.finished = True
             reward += FINISHED_REWARD 
@@ -147,7 +148,7 @@ class CarEnv(gym.Env):
         if self.window is None:
             pygame.init()
             self.window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.window.blit(LOGIC_TRACK, (0, 0))
+        self.window.blit(self.track.logic, (0, 0))
         self.car.draw(self.window)
         pygame.display.update()
 
