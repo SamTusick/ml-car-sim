@@ -120,7 +120,11 @@ def main():
 
     out_dir = RESULTS_DIR / args.name / "generalization"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{Path(args.track).stem}_genomes.csv"
+    # record which start pose produced these rows, so different poses never overwrite each other
+    pose = {"start_x": args.start_x, "start_y": args.start_y, "start_angle": args.start_angle}
+    rows = [{**r, **pose} for r in rows]
+    out_name = f"{Path(args.track).stem}_x{args.start_x:g}_y{args.start_y:g}_a{args.start_angle:g}_genomes.csv"
+    out_file = out_dir / out_name
     write_rows(out_file, rows)
     print(f"\nsaved {len(rows)} rows to {out_file}")
 
