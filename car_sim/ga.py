@@ -59,6 +59,21 @@ def evaluate(genome, env):
             done = True
     return curr_reward, info
 
+def aggregate_fitness(per_track_fitness):
+    # sum over the training tracks (same ranking as the mean for a fixed track count)
+    return float(sum(per_track_fitness))
+
+def evaluate_on_tracks(genome, envs):
+    # run one genome on every env (one per track), in order
+    # returns the aggregate fitness, the per-track fitness list and the per-track info list
+    per_track = []
+    infos = []
+    for env in envs:
+        fitness, info = evaluate(genome, env)
+        per_track.append(fitness)
+        infos.append(info)
+    return aggregate_fitness(per_track), per_track, infos
+
 def select_parents(population, fitness_scores):
     # sort fitness scores but keep index using argsort
     order = np.argsort(fitness_scores)

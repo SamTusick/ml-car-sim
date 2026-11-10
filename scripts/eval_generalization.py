@@ -1,5 +1,6 @@
-# python -m scripts.eval_generalization --name pop_200 --track assets/tracks/logic_track2.png --start-x X --start-y Y
-# Evaluates saved final-generation genomes on a new track. No training happens here.
+# python -m scripts.eval_generalization --name multi_12 --train-tracks 1,2 --test-tracks 3,4
+# Evaluates saved final-generation genomes on train and held-out tracks. No training happens here.
+# The champion of each seed is chosen from the saved training fitness only, never from test results.
 
 import argparse
 import csv
@@ -9,8 +10,9 @@ from pathlib import Path
 import numpy as np
 
 from car_sim.env import CarEnv
-from car_sim.ga import evaluate
-from car_sim.track import load_track
+from car_sim.ga import evaluate, evaluate_on_tracks
+from car_sim.track import load_tracks, get_start_pose
+from scripts.train_ga import parse_seeds
 
 RESULTS_DIR = Path("results")
 
@@ -29,39 +31,52 @@ def load_population(pop_dir, seed, gen):
     return data["population"], data["fitness_scores"]
 
 
-# Sanity check: the best genome must reproduce its saved fitness on the original track.
-def sanity_check(pop_dir, seeds, gen):
-    env = CarEnv()  # default track = the one used for training
+# Champion of a seed = index of the top saved training fitness (first max wins, like argmax).
+def champion_index(fitness_scores):
+    return int(np.argmax(fitness_scores))
+
+
+# Sanity check: each champion must reproduce its saved aggregate fitness on the training tracks.
+def sanity_check(pop_dir, seeds, gen, train_envs):
     ok = True
     for seed in seeds:
         population, fitness_scores = load_population(pop_dir, seed, gen)
-        best = int(np.argmax(fitness_scores))
-        fitness, info = evaluate(population[best], env)
-        match = np.isclose(fitness, fitness_scores[best], rtol=0, atol=1e-6)
-        print(f"seed {seed}: saved {fitness_scores[best]:.4f}, recomputed {fitness:.4f}, "
-              f"gates {info['gates_passed']}, {'OK' if match else 'MISMATCH'}")
+        best = champion_index(fitness_scores)
+        total, _, infos = evaluate_on_tracks(population[best], train_envs)
+        match = np.isclose(total, fitness_scores[best], rtol=0, atol=1e-6)
+        gates = sum(i["gates_passed"] for i in infos)
+        print(f"seed {seed}: saved {fitness_scores[best]:.4f}, recomputed {total:.4f}, "
+              f"gates {gates}, {'OK' if match else 'MISMATCH'}")
         ok = ok and match
-    env.close()
     return ok
 
 
-# Evaluate every genome of every seed on the new track and return one dict per genome.
-def evaluate_new_track(pop_dir, seeds, gen, track):
-    env = CarEnv(track=track)
+# Evaluate every genome of every seed on every track and return one dict per (genome, track).
+def evaluate_all(pop_dir, seeds, gen, track_ids, tracks, split):
     rows = []
-    for seed in seeds:
-        population, fitness_scores = load_population(pop_dir, seed, gen)
-        for i, genome in enumerate(population):
-            fitness, info = evaluate(genome, env)
-            rows.append({
-                "seed": seed,
-                "genome_index": i,
-                "train_fitness": float(fitness_scores[i]),
-                "fitness": fitness,
-                "gates_passed": info["gates_passed"],
-                "finished": int(info["finished"]),
-            })
-    env.close()
+    for track_id, track in zip(track_ids, tracks):
+        env = CarEnv(track=track)
+        start_pos, start_angle = track.start_pos, track.start_angle
+        for seed in seeds:
+            population, fitness_scores = load_population(pop_dir, seed, gen)
+            best = champion_index(fitness_scores)
+            for i, genome in enumerate(population):
+                fitness, info = evaluate(genome, env)
+                rows.append({
+                    "seed": seed,
+                    "genome_index": i,
+                    "is_champion": int(i == best),
+                    "train_fitness": float(fitness_scores[i]),
+                    "split": split,
+                    "track": track_id,
+                    "fitness": fitness,
+                    "gates_passed": info["gates_passed"],
+                    "finished": int(info["finished"]),
+                    "start_x": start_pos[0],
+                    "start_y": start_pos[1],
+                    "start_angle": start_angle,
+                })
+        env.close()
     return rows
 
 
@@ -72,63 +87,79 @@ def write_rows(path, rows):
         writer.writerows(rows)
 
 
-# Print per-seed and overall results. The best genome is the row with the top train_fitness.
-def print_summary(pop_dir, seeds, gen, rows):
-    print(f"\n{'seed':>4} {'best gates':>10} {'best finished':>13} {'pop finish rate':>16} {'unique genomes':>15}")
-    best_finish = 0
-    total_finish = 0
-    total_n = 0
+# Print one line per seed champion per track, then finish counts per track and per split.
+def print_summary(seeds, rows, track_ids_by_split):
+    champs = [r for r in rows if r["is_champion"]]
+    print(f"\n{'seed':>4} {'split':>5} {'track':>5} {'gates':>5} {'finished':>8} {'fitness':>10}")
     for seed in seeds:
-        seed_rows = [r for r in rows if r["seed"] == seed]
-        best_row = max(seed_rows, key=lambda r: r["train_fitness"])  # first max wins, like argmax
-        n_fin = sum(r["finished"] for r in seed_rows)
-        population, _ = load_population(pop_dir, seed, gen)
-        n_unique = len(np.unique(population, axis=0))
-        print(f"{seed:>4} {best_row['gates_passed']:>10} {best_row['finished']:>13} "
-              f"{n_fin:>8}/{len(seed_rows):<7} {n_unique:>15}")
-        best_finish += best_row["finished"]
-        total_finish += n_fin
-        total_n += len(seed_rows)
-    print(f"\nbest genomes that finish the new track: {best_finish}/{len(seeds)}")
-    print(f"finish rate over all final populations: {total_finish}/{total_n} = {total_finish / total_n:.1%}")
+        for r in champs:
+            if r["seed"] == seed:
+                print(f"{seed:>4} {r['split']:>5} {r['track']:>5} {r['gates_passed']:>5} "
+                      f"{r['finished']:>8} {r['fitness']:>10.1f}")
+    print("\nchampion finishes per track, and finish rate over all final populations:")
+    for split, ids in track_ids_by_split.items():
+        for track_id in ids:
+            c = [r for r in champs if r["split"] == split and r["track"] == track_id]
+            p = [r for r in rows if r["split"] == split and r["track"] == track_id]
+            c_fin = sum(r["finished"] for r in c)
+            p_fin = sum(r["finished"] for r in p)
+            print(f"  {split} track {track_id}: champions {c_fin}/{len(c)}, "
+                  f"population {p_fin}/{len(p)} = {p_fin / len(p):.1%}")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate saved GA genomes on a new track.")
-    parser.add_argument("--name", required=True, help="experiment folder under results/, e.g. pop_200")
-    parser.add_argument("--track", required=True, help="path to the new logic track PNG")
-    parser.add_argument("--start-x", type=float, required=True, help="car start x on the new track")
-    parser.add_argument("--start-y", type=float, required=True, help="car start y on the new track")
-    parser.add_argument("--start-angle", type=float, default=0, help="car start angle in degrees (0 = up)")
+    parser = argparse.ArgumentParser(description="Evaluate saved GA genomes on train and held-out tracks.")
+    parser.add_argument("--name", required=True, help="experiment folder under results/")
+    parser.add_argument("--train-tracks", default="1,2", help='tracks used in training, e.g. "1,2"')
+    parser.add_argument("--test-tracks", default="3,4", help='held-out tracks, e.g. "3,4"')
     parser.add_argument("--gen", type=int, default=49, help="saved generation to load")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    try:
+        train_ids = parse_seeds(args.train_tracks)
+        test_ids = parse_seeds(args.test_tracks)
+    except ValueError as e:
+        sys.exit(f"Invalid track list: {e}")
+    if set(train_ids) & set(test_ids):
+        sys.exit("Train and test tracks overlap; held-out tracks must not be used in training.")
+
+    # fail early with a clear message if a start pose or image is missing
+    try:
+        for track_id in train_ids + test_ids:
+            get_start_pose(track_id)
+        train_tracks = load_tracks(train_ids)
+        test_tracks = load_tracks(test_ids)
+    except (ValueError, FileNotFoundError) as e:
+        sys.exit(f"Track setup failed: {e}")
+
     pop_dir = RESULTS_DIR / args.name / "populations"
     seeds = find_seeds(pop_dir, args.gen)
     if not seeds:
         sys.exit(f"No seed*_gen{args.gen}.npz files in {pop_dir}")
 
-    print("Sanity check on the original track:")
-    if not sanity_check(pop_dir, seeds, args.gen):
-        sys.exit("Saved fitness was NOT reproduced. Stopping before the new track.")
+    print(f"Sanity check on training tracks {train_ids}:")
+    train_envs = [CarEnv(track=t) for t in train_tracks]
+    ok = sanity_check(pop_dir, seeds, args.gen, train_envs)
+    for env in train_envs:
+        env.close()
+    if not ok:
+        sys.exit("Saved fitness was NOT reproduced. Stopping before the held-out tracks.")
 
-    track = load_track(args.track, (args.start_x, args.start_y), args.start_angle)
-    rows = evaluate_new_track(pop_dir, seeds, args.gen, track)
+    rows = evaluate_all(pop_dir, seeds, args.gen, train_ids, train_tracks, "train")
+    rows += evaluate_all(pop_dir, seeds, args.gen, test_ids, test_tracks, "test")
 
     out_dir = RESULTS_DIR / args.name / "generalization"
     out_dir.mkdir(parents=True, exist_ok=True)
-    # record which start pose produced these rows, so different poses never overwrite each other
-    pose = {"start_x": args.start_x, "start_y": args.start_y, "start_angle": args.start_angle}
-    rows = [{**r, **pose} for r in rows]
-    out_name = f"{Path(args.track).stem}_x{args.start_x:g}_y{args.start_y:g}_a{args.start_angle:g}_genomes.csv"
-    out_file = out_dir / out_name
-    write_rows(out_file, rows)
-    print(f"\nsaved {len(rows)} rows to {out_file}")
+    tag = f"train{'-'.join(map(str, train_ids))}_test{'-'.join(map(str, test_ids))}"
+    write_rows(out_dir / f"{tag}_genomes.csv", rows)
+    champs = [r for r in rows if r["is_champion"]]
+    write_rows(out_dir / f"{tag}_champions.csv", champs)
+    print(f"\nsaved {len(rows)} genome rows and {len(champs)} champion rows to {out_dir}")
 
-    print_summary(pop_dir, seeds, args.gen, rows)
+    print_summary(seeds, rows, {"train": train_ids, "test": test_ids})
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# python -m scripts.train_ga --name pool_frac_0.1 --seeds 0-9
+# python -m scripts.train_ga --name pool_frac_0.1 --seeds 0-9 --train-tracks 1,2
 
 
 import argparse
@@ -14,9 +14,10 @@ from tqdm import tqdm
 
 from scripts.plot_ga import plot_experiment
 from car_sim.env import CarEnv
+from car_sim.track import load_tracks
 from car_sim.network import make_network
 from car_sim.ga import (
-    to_vector, evaluate, next_generation,
+    to_vector, evaluate_on_tracks, next_generation,
     SIGMA, MUTATION_RATE, POOL_FRAC, N_ELITE,  # POOL_FRAC and N_ELITE need the ga.py change
 )
 
@@ -101,13 +102,15 @@ def get_git_commit():
 
 
 # Write config.json once per experiment with settings, seeds, name, time and commit.
-def write_config(exp_dir, name, seeds):
+def write_config(exp_dir, name, seeds, track_ids):
     config = {
         "name": name,
         **get_settings(),
         "crossover": "uniform",
         "mutation": "gaussian",
         "seeds": seeds,
+        "train_tracks": track_ids,
+        "fitness_aggregation": "sum",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git_commit": get_git_commit(),
     }
@@ -123,10 +126,20 @@ def write_rows(path, rows):
         writer.writerows(rows)
 
 
+# Per-track columns for one genome (the best of the generation): fitness, gates, finished.
+def track_columns(track_ids, fitnesses, infos):
+    cols = {}
+    for track_id, fitness, info in zip(track_ids, fitnesses, infos):
+        cols[f"fitness_t{track_id}"] = fitness
+        cols[f"gates_t{track_id}"] = info["gates_passed"]
+        cols[f"finished_t{track_id}"] = int(info["finished"])
+    return cols
+
+
 # Run one full GA for a single seed and return the per-generation rows.
-def run_one_seed(seed, pop_dir=None, save_gens=()):
+def run_one_seed(seed, track_ids, pop_dir=None, save_gens=()):
     rng = np.random.default_rng(seed)   # one rng, passed down everywhere
-    env = CarEnv()                      # headless, fresh per seed
+    envs = [CarEnv(track=t) for t in load_tracks(track_ids)]   # headless, one env per training track
     settings = get_settings()
     rows = []
 
@@ -135,9 +148,11 @@ def run_one_seed(seed, pop_dir=None, save_gens=()):
 
     for generation in tqdm(range(N_GENERATIONS), desc=f"seed {seed}"):
         # one score per genome, same order as population
-        results = [evaluate(genome, env) for genome in population]
-        fitness_scores = [r[0] for r in results]
-        infos = [r[1] for r in results]
+        results = [evaluate_on_tracks(genome, envs) for genome in population]
+        fitness_scores = [r[0] for r in results]        # aggregate fitness, used for selection
+        per_track = [r[1] for r in results]             # per genome: list of fitness, one per track
+        infos = [r[2] for r in results]                 # per genome: list of info dicts, one per track
+        best = int(np.argmax(fitness_scores))
 
         rows.append({
             "seed": seed,
@@ -145,8 +160,11 @@ def run_one_seed(seed, pop_dir=None, save_gens=()):
             "best_fitness": max(fitness_scores),
             "mean_fitness": float(np.mean(fitness_scores)),
             "worst_fitness": min(fitness_scores),
-            "best_gates_passed": max(i["gates_passed"] for i in infos),
-            "finished_count": sum(i["finished"] for i in infos),
+            # total gates over the training tracks, best genome of the generation
+            "best_gates_passed": max(sum(t["gates_passed"] for t in i) for i in infos),
+            # genomes that finished every training track
+            "finished_count": sum(all(t["finished"] for t in i) for i in infos),
+            **track_columns(track_ids, per_track[best], infos[best]),
             **settings,
         })
 
@@ -156,7 +174,8 @@ def run_one_seed(seed, pop_dir=None, save_gens=()):
 
         population = next_generation(population, fitness_scores, rng)
 
-    env.close()
+    for env in envs:
+        env.close()
     return rows
 
 
@@ -165,6 +184,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train the GA over several seeds.")
     parser.add_argument("--name", required=True, help='experiment name, e.g. "baseline"')
     parser.add_argument("--seeds", default="0,1,2", help='e.g. "0,1,2,5" or "0-9"')
+    parser.add_argument("--train-tracks", default="1,2",
+                        help='track ids to train on, e.g. "1,2" (ids are defined in car_sim/track.py)')
     parser.add_argument("--hypothesis", default=None, help="optional note saved to hypothesis.txt")
     parser.add_argument("--save-gens", default="0,5,10,last",
                         help='generations to save: comma list, "last", "all" or "none"')
@@ -181,6 +202,11 @@ def main():
         sys.exit(f"Invalid --seeds: {e}")
 
     try:
+        track_ids = parse_seeds(args.train_tracks)   # same "1,2" / "1-3" syntax as seeds
+    except ValueError as e:
+        sys.exit(f"Invalid --train-tracks: {e}")
+
+    try:
         save_gens = parse_save_gens(args.save_gens, N_GENERATIONS)
     except ValueError as e:
         sys.exit(f"Invalid --save-gens: {e}")
@@ -194,12 +220,12 @@ def main():
         )
 
     exp_dir.mkdir(parents=True, exist_ok=True)
-    write_config(exp_dir, args.name, seeds)
+    write_config(exp_dir, args.name, seeds, track_ids)
     if args.hypothesis:
         (exp_dir / "hypothesis.txt").write_text(args.hypothesis + "\n")
 
     for seed in seeds:
-        rows = run_one_seed(seed, exp_dir / "populations", save_gens)
+        rows = run_one_seed(seed, track_ids, exp_dir / "populations", save_gens)
         out_file = exp_dir / f"ga_seed{seed}.csv"
         write_rows(out_file, rows)
         print(f"saved to {out_file}")

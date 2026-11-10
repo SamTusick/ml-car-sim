@@ -51,6 +51,43 @@ def load_track(logic_path, start_pos=(30, 630), start_angle=0):
 DEFAULT_TRACK = load_track("assets/tracks/logic_track1.png")
 VISUAL_TRACK = scale_image(pygame.image.load("assets/tracks/visual_track1.png"), 1)
 
+# Track 2 starting cord (98,554)
+
+# Logic image path for each track id. Each logic image has a pixel-aligned visual_trackN.png.
+# Tracks 3 and 4 are held out for testing; their files must exist before they are loaded.
+TRACK_PATHS = {
+    1: "assets/tracks/logic_track1.png",
+    2: "assets/tracks/logic_track2.png",
+    3: "assets/tracks/logic_track3.png",
+    4: "assets/tracks/logic_track4.png",
+}
+
+
+# Fixed start pose per track: (start_pos, start_angle in degrees, 0 = up).
+# No randomness, so every genome and every run sees the identical start.
+# Add entries for tracks 3 and 4 once their images are drawn.
+START_POSES = {
+    1: ((30, 630), 0),
+    2: ((98, 554), 0),
+}
+
+
+def get_start_pose(track_id):
+    if track_id not in START_POSES:
+        raise ValueError(f"no start pose for track {track_id}; add it to START_POSES in track.py")
+    return START_POSES[track_id]
+
+
+def load_tracks(track_ids):
+    # build one track object per id, in the order given
+    tracks = []
+    for track_id in track_ids:
+        if track_id not in TRACK_PATHS:
+            raise ValueError(f"unknown track id {track_id}; known ids: {sorted(TRACK_PATHS)}")
+        start_pos, start_angle = get_start_pose(track_id)
+        tracks.append(load_track(TRACK_PATHS[track_id], start_pos, start_angle))
+    return tracks
+
 LOGIC_TRACK = DEFAULT_TRACK.logic
 OB_MASK = DEFAULT_TRACK.ob_mask
 FINISH_LINE_MASK = DEFAULT_TRACK.finish_mask
