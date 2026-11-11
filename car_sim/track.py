@@ -65,10 +65,11 @@ TRACK_PATHS = {
 
 # Fixed start pose per track: (start_pos, start_angle in degrees, 0 = up).
 # No randomness, so every genome and every run sees the identical start.
-# Add entries for tracks 3 and 4 once their images are drawn.
 START_POSES = {
     1: ((30, 630), 0),
     2: ((98, 554), 0),
+    3: ((132, 542), 0),
+    4: ((122, 511), 10),
 }
 
 
