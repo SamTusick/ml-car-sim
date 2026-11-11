@@ -66,7 +66,7 @@ def summarize(runs):
             "seed": seed,
             "final_best_fitness": last["best_fitness"],
             "final_mean_fitness": last["mean_fitness"],
-            "max_gates_passed": df["best_gates_passed"].max(),
+            "max_gates_passed(5 per track)": df["best_gates_passed"].max(),
             "first_gen_finished_above_0": first_fin,
             "final_gap": last["best_fitness"] - last["mean_fitness"],
         })
